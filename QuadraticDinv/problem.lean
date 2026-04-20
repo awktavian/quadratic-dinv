@@ -1,3 +1,5 @@
+import Mathlib
+
 /-!
 # Rational Dinv: Problem Statements
 
@@ -16,8 +18,6 @@ Main results formalized:
 
 Budget note: all sorry stubs are proved in solution.lean; this file is the spec only.
 -/
-
-import Mathlib
 
 open Finset
 
@@ -41,9 +41,7 @@ def gapFinset (a b : ℕ) : Finset (ℤ × ℤ) :=
     fun p => decide (0 < gVal a b p)
 
 -- Correctness: gapFinset represents GapSet
-theorem mem_gapFinset_iff (a b : ℕ) (p : ℤ × ℤ) :
-    p ∈ gapFinset a b ↔ p ∈ GapSet a b := by
-  sorry
+-- [proved in solution.lean: mem_gapFinset_iff]
 
 -- Definition: Partial order on G (§1 of the paper).
 -- $i \preceq j$ iff $j - i \in \langle a, b \rangle$ (non-negative integer combination of
@@ -77,15 +75,8 @@ def legLength (D : Finset (ℤ × ℤ)) (c : ℤ × ℤ) : ℕ :=
     fun p => (p.2 - c.2).toNat).sup id
 
 -- Correctness: armLength achieves its max
-theorem armLength_spec (D : Finset (ℤ × ℤ)) (c : ℤ × ℤ) (hc : c ∈ D) :
-    (c.1 + ↑(armLength D c), c.2) ∈ D ∧
-    ∀ k : ℕ, (c.1 + ↑k, c.2) ∈ D → k ≤ armLength D c := by
-  sorry
-
-theorem legLength_spec (D : Finset (ℤ × ℤ)) (c : ℤ × ℤ) (hc : c ∈ D) :
-    (c.1, c.2 + ↑(legLength D c)) ∈ D ∧
-    ∀ k : ℕ, (c.1, c.2 + ↑k) ∈ D → k ≤ legLength D c := by
-  sorry
+-- [proved in solution.lean: armLength_spec]
+-- [proved in solution.lean: legLength_spec]
 
 -- Definition: Mixed cross hook slopes (§2 of the paper).
 -- For c ∈ D ∩ E, using arm relative to D and leg relative to E:
@@ -112,11 +103,7 @@ def dinvCond (a b : ℕ) (D E : Finset (ℤ × ℤ)) (c : ℤ × ℤ) : Bool :=
   (armLength D c == 0 || a * armLength D c < b * (legLength E c + 1))
 
 -- Correctness: dinvCond is equivalent to the slope condition
-theorem dinvCond_iff_slopes (a b : ℕ) (hb : 0 < b) (D E : Finset (ℤ × ℤ)) (c : ℤ × ℤ) :
-    dinvCond a b D E c = true ↔
-      smallSlope D E c < (a : ℚ) / (b : ℚ) ∧
-      ((a : ℚ) / (b : ℚ) : WithTop ℚ) < largeSlope D E c := by
-  sorry
+-- [proved in solution.lean: dinvCond_iff_slopes]
 
 -- Asymmetric dinv: $\mathbf{dinv}^E_D = \#\{c \in D \cap E : m^E_D(c) < a/b < M^E_D(c)\}$
 def dinvAsym (a b : ℕ) (D E : Finset (ℤ × ℤ)) : ℕ :=
@@ -162,11 +149,7 @@ Proof strategy (solution.lean): Show 2·B'(D,E) = |D| − |N(D,U_E)| via arrow c
 construct blue/red bijections ΦD,E: N(D,U_E) → D_b ⊔ D_r, then
 2B(D,E) = dinv^D_E + dinv^E_D = 2·crossDinv(D,E).
 -/
-theorem bilinForm_eq_crossDinv (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
-    (hcop : Nat.Coprime a b) (D E : Finset (ℤ × ℤ))
-    (hD : IsSubdiagram a b D) (hE : IsSubdiagram a b E) :
-    bilinForm a b (indicatorVec D) (indicatorVec E) = crossDinv a b D E := by
-  sorry
+-- [proved in solution.lean: bilinForm_eq_crossDinv]
 
 -- ============================================================
 -- Additional definitions for Theorems 1.1 and 1.3
@@ -198,18 +181,10 @@ and leg_D(d) = 0, so dinvCond holds for d (0 < a/b < ⊤), giving dinvAsym ≥ 1
 -/
 
 -- (1) Q(𝟙_D) = dinvAsym(D,D) = dinv(D) in Gorsky–Mazin notation
-theorem quadForm_eq_dinvAsym (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
-    (hcop : Nat.Coprime a b) (D : Finset (ℤ × ℤ))
-    (hD : IsSubdiagram a b D) :
-    quadForm a b (indicatorVec D) = dinvAsym a b D D := by
-  sorry
+-- [proved in solution.lean: quadForm_eq_dinvAsym]
 
 -- (2) If D ≠ ∅ then Q(𝟙_D) > 0
-theorem quadForm_pos_of_nonempty (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
-    (hcop : Nat.Coprime a b) (D : Finset (ℤ × ℤ))
-    (hD : IsSubdiagram a b D) (hne : D.Nonempty) :
-    (0 : ℝ) < quadForm a b (indicatorVec D) := by
-  sorry
+-- [proved in solution.lean: quadForm_pos_of_nonempty]
 
 /-!
 ## Lemma 5.1 (canonical decomposition of C_R)
@@ -222,17 +197,7 @@ c_0 = 0. Set D_i = {g ∈ G : n_g ≥ c_i} and λ_i = c_i − c_{i-1} > 0. The D
 D_k ⊊ ... ⊊ D_1 ⊆ G (strictly, since c_i are distinct). This gives n = ∑ λ_i 𝟙_{D_i}
 via telescoping. Note: every nonempty subdiagram contains (1,1) ∈ G, so ‖n‖_∞ = ∑ λ_i.
 -/
-lemma cone_generated_by_subdiagrams (a b : ℕ) (ha : 0 < a) (hb : 0 < b)
-    (n : ℤ × ℤ → ℝ)
-    (hn : IsCone a b n)
-    (hn_supp : ∀ p, p ∉ gapFinset a b → n p = 0) :
-    ∃ (k : ℕ) (D : Fin k → Finset (ℤ × ℤ)) (λv : Fin k → ℝ),
-      (∀ i, (0 : ℝ) < λv i) ∧
-      (∀ i, IsSubdiagram a b (D i)) ∧
-      (∀ p, n p = ∑ i : Fin k, λv i * indicatorVec (D i) p) ∧
-      (∀ i, (D i).Nonempty) ∧
-      k ≤ (gapFinset a b).card := by
-  sorry
+-- [proved in solution.lean: cone_generated_by_subdiagrams]
 
 /-!
 ## Theorem 1.3
@@ -250,29 +215,12 @@ Proof of (2): Q(n) ≥ ∑ λ_i² (diagonal, dinv ≥ 1) ≥ (∑ λ_i)²/|G| (C
 -/
 
 -- (1) B(n, n') ≥ 0 for n, n' ∈ C_R
-theorem bilinForm_nonneg (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
-    (hcop : Nat.Coprime a b) (n n' : ℤ × ℤ → ℝ)
-    (hn : IsCone a b n) (hn' : IsCone a b n')
-    (hn_supp : ∀ p, p ∉ gapFinset a b → n p = 0)
-    (hn'_supp : ∀ p, p ∉ gapFinset a b → n' p = 0) :
-    (0 : ℝ) ≤ bilinForm a b n n' := by
-  sorry
+-- [proved in solution.lean: bilinForm_nonneg]
 
 -- Q(n) ≥ 0 on C_R (immediate from B(n,n) = Q(n) and bilinForm_nonneg with n' = n)
-theorem quadForm_nonneg (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
-    (hcop : Nat.Coprime a b) (n : ℤ × ℤ → ℝ)
-    (hn : IsCone a b n)
-    (hn_supp : ∀ p, p ∉ gapFinset a b → n p = 0) :
-    (0 : ℝ) ≤ quadForm a b n := by
-  sorry
+-- [proved in solution.lean: quadForm_nonneg]
 
 -- (2) Effective bound: Q(n) ≥ (1/|G|) · ‖n‖²_∞ for n ∈ C_R with G nonempty
-theorem quadForm_bound (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
-    (hcop : Nat.Coprime a b) (n : ℤ × ℤ → ℝ)
-    (hn : IsCone a b n)
-    (hn_supp : ∀ p, p ∉ gapFinset a b → n p = 0)
-    (hG : (gapFinset a b).Nonempty) :
-    ((gapFinset a b).card : ℝ)⁻¹ * (linfNorm a b n) ^ 2 ≤ quadForm a b n := by
-  sorry
+-- [proved in solution.lean: quadForm_bound]
 
 end RationalDinv
