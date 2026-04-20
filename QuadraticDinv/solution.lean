@@ -1,3 +1,32 @@
+/-!
+# Rational Dinv: Proofs
+
+Full proofs for arXiv:2604.13238 (Yifeng Huang, 2026):
+"A Quadratic Form Generalization of Rational Dinv."
+Lean 4 / Mathlib v4.28.0.
+
+## Structure
+
+All definitions are repeated verbatim from problem.lean (the spec). Proofs are given here.
+The AXLE verifier checks solution.lean against problem.lean at compile time.
+
+## Proof status (verified by `lake build`, 0 sorry)
+
+| Result           | Status   | Method                                       |
+|------------------|----------|----------------------------------------------|
+| Thm 1.2          | PROVED   | Blue/red bijection + arrow counting           |
+| Thm 1.1 (eq.)    | PROVED   | Polarization + Thm 1.2 + crossDinv symmetry  |
+| Thm 1.1 (pos.)   | PROVED   | Minimal g-value element has arm=leg=0        |
+| Lemma 5.1        | PROVED   | Sorted level sets + telescoping induction    |
+| Thm 1.3 (≥0)     | PROVED   | Bilinearity + decomposition + crossDinv≥0    |
+| Thm 1.3 (bound)  | PROVED   | Diagonal bound + Cauchy–Schwarz + k≤|G|      |
+
+## Budget note
+
+All proofs are compiled locally via `lake build`. No cloud compute or sorry shortcuts.
+Target: complete formalization under $20 total API budget for this session.
+-/
+
 import Mathlib
 
 open Finset
@@ -2590,6 +2619,9 @@ lemma two_bilinForm_eq_dinvAsym_sum (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab :
   push_cast
   linarith
 
+/-- Theorem 1.2 (autoformalized by AxiomProver): for subdiagrams D, E ⊆ G,
+    B(𝟙_D, 𝟙_E) = dinv(D, E).
+    Proof: two_bilinForm_eq_dinvAsym_sum gives 2B = dinv^D_E + dinv^E_D = 2·crossDinv. -/
 theorem bilinForm_eq_crossDinv (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
     (hcop : Nat.Coprime a b) (D E : Finset (ℤ × ℤ))
     (hD : IsSubdiagram a b D) (hE : IsSubdiagram a b E) :
@@ -2722,13 +2754,18 @@ theorem quadForm_pos_of_nonempty (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a 
 -- Theorem 1.3: B(n,n') ≥ 0 on C_R and Q(n) ≥ (1/|G|)‖n‖²_∞
 -- ============================================================
 
-/-- The cone C_R: non-negative functions on G weakly decreasing northeast. -/
+/-- The cone C_R (§1 of arXiv:2604.13238): non-negative functions on G that are weakly
+    decreasing going northeast, i.e., n_j ≥ n_i whenever j is SW of i (gapLE a b i j).
+    The poset (G,⪯) has its MAXIMUM at (1,1) (the SW corner), so for n ∈ C_R:
+      ‖n‖_∞ = n_{(1,1)}. -/
 def IsCone (a b : ℕ) (n : ℤ × ℤ → ℝ) : Prop :=
   (∀ p ∈ gapFinset a b, (0 : ℝ) ≤ n p) ∧
   (∀ i j, i ∈ gapFinset a b → j ∈ gapFinset a b →
     gapLE a b i j → n j ≥ n i)
 
-/-- ℓ∞ norm of n on G (supremum of values, which equals n at the SW corner for n ∈ C_R). -/
+/-- ℓ∞ norm of n on G: sup{n(p) : p ∈ G}, or 0 if G = ∅.
+    For n ∈ C_R this equals n_{(1,1)}, since (1,1) is the unique maximum of (G,⪯).
+    Note: (1,1) ∈ G whenever 1 < a < b (since g(1,1) = ab−a−b = (a−1)(b−1)−1 > 0). -/
 noncomputable def linfNorm (a b : ℕ) (n : ℤ × ℤ → ℝ) : ℝ :=
   if h : (gapFinset a b).Nonempty then (gapFinset a b).sup' h n else 0
 
@@ -2984,9 +3021,15 @@ theorem quadForm_nonneg (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
 
 
 
-/-- Theorem 1.3 (effective bound): Q(n) ≥ (1/|G|) ‖n‖²_∞ for n ∈ C_R.
-    Proof: use Lemma 5.1 to write n = ∑ λ_i 𝟙_{D_i}, then
-    Q(n) ≥ ∑ λ_i² * dinv(D_i) ≥ ∑ λ_i² ≥ (∑ λ_i)²/|G| by Cauchy-Schwarz. -/
+/-- Theorem 1.3 (effective bound): Q(n) ≥ (1/|G|) ‖n‖²_∞ for n ∈ C_R, G nonempty.
+    Proof: write n = ∑ λ_i 𝟙_{D_i} via Lemma 5.1, then:
+      Q(n) ≥ ∑ λ_i² · dinv(D_i)   [drop cross terms; dinv ≥ 0]
+           ≥ ∑ λ_i²                [dinv(D_i) ≥ 1 since D_i ≠ ∅]
+           ≥ (∑ λ_i)² / k          [Cauchy–Schwarz: (∑ λ_i)² ≤ k · ∑ λ_i²]
+           ≥ (∑ λ_i)² / |G|        [k ≤ |G|]
+           ≥ ‖n‖²_∞ / |G|          [‖n‖_∞ ≤ ∑ λ_i, proved below]
+    Remark: the paper uses ‖n‖_∞ = ∑ λ_i (equality via f=(1,1) ∈ every D_i). Our proof
+    uses only the inequality ‖n‖_∞ ≤ ∑ λ_i, which is sufficient and avoids proving (1,1)∈G. -/
 theorem quadForm_bound (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
     (hcop : Nat.Coprime a b) (n : ℤ × ℤ → ℝ)
     (hn : IsCone a b n)
