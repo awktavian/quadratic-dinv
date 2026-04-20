@@ -2598,4 +2598,474 @@ theorem bilinForm_eq_crossDinv (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < 
   unfold crossDinv
   linarith
 
+-- ============================================================
+-- Theorem 1.1: Q(𝟙_D) = dinv(D) and Q(𝟙_D) > 0 when D ≠ ∅
+-- ============================================================
+
+/-- The symmetric bilinear form associated with Q satisfies B(n,n) = Q(n).
+    Proof: B(n,n) = (1/2)*(Q(2n) - Q(n) - Q(n)) = (1/2)*2*Q(n) = Q(n). -/
+lemma bilinForm_eq_quadForm (a b : ℕ) (n : ℤ × ℤ → ℝ) :
+    bilinForm a b n n = quadForm a b n := by
+  have hcross : quadForm a b (n + n) - quadForm a b n - quadForm a b n =
+      ∑ i ∈ gapFinset a b, ∑ j ∈ gapFinset a b,
+        (kernelK a b (gVal a b j - gVal a b i) : ℝ) * (n i * n j + n i * n j) :=
+    quadForm_cross_terms a b n n
+  have heq2 : ∑ i ∈ gapFinset a b, ∑ j ∈ gapFinset a b,
+      (kernelK a b (gVal a b j - gVal a b i) : ℝ) * (n i * n j + n i * n j) =
+      2 * quadForm a b n := by
+    simp only [quadForm]
+    push_cast
+    congr 1; ext i; congr 1; ext j; ring
+  unfold bilinForm
+  linarith
+
+/-- Theorem 1.1 (equality): Q(𝟙_D) = dinv(D) = dinvAsym(D,D).
+    Proof: Q(𝟙_D) = B(𝟙_D,𝟙_D) (polarization) = crossDinv(D,D) (Thm 1.2) = dinvAsym(D,D). -/
+theorem quadForm_eq_dinvAsym (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
+    (hcop : Nat.Coprime a b) (D : Finset (ℤ × ℤ))
+    (hD : IsSubdiagram a b D) :
+    quadForm a b (indicatorVec D) = (dinvAsym a b D D : ℝ) := by
+  rw [← bilinForm_eq_quadForm a b (indicatorVec D)]
+  rw [bilinForm_eq_crossDinv a b ha hb hab hcop D D hD hD]
+  simp only [crossDinv]
+  push_cast; ring
+
+/-- g-value decreases by a when moving one step east. -/
+private lemma gVal_east (a b : ℕ) (p : ℤ × ℤ) :
+    gVal a b (p.1 + 1, p.2) = gVal a b p - (a : ℤ) := by
+  simp only [gVal]; ring
+
+/-- g-value decreases by b when moving one step north. -/
+private lemma gVal_north' (a b : ℕ) (p : ℤ × ℤ) :
+    gVal a b (p.1, p.2 + 1) = gVal a b p - (b : ℤ) := gVal_north a b p
+
+/-- At the element of D with minimal g-value, arm length = 0.
+    Any eastward neighbor would have strictly smaller g-value, contradicting minimality. -/
+private lemma armLength_eq_zero_of_minimal_gVal (a b : ℕ) (ha : 0 < a)
+    (D : Finset (ℤ × ℤ)) (d : ℤ × ℤ) (hd : d ∈ D)
+    (hmin : ∀ p ∈ D, gVal a b d ≤ gVal a b p) :
+    armLength D d = 0 := by
+  apply le_antisymm _ (Nat.zero_le _)
+  unfold armLength
+  apply Finset.sup_le
+  intro k hk
+  simp only [Finset.mem_image, Finset.mem_filter, id] at hk
+  obtain ⟨p, ⟨hp_mem, hp_row, hp_le⟩, rfl⟩ := hk
+  have ha_pos : (0 : ℤ) < (a : ℤ) := by exact_mod_cast ha
+  have hg_eq : gVal a b p = gVal a b d - (a : ℤ) * (p.1 - d.1) := by
+    simp only [gVal, hp_row]; ring
+  have hmin_p := hmin p hp_mem
+  have hdiff_le : p.1 - d.1 ≤ 0 := by rw [hg_eq] at hmin_p; nlinarith
+  have hdiff_ge : 0 ≤ p.1 - d.1 := by linarith
+  have hdiff_zero : p.1 - d.1 = 0 := le_antisymm hdiff_le hdiff_ge
+  simp [hdiff_zero]
+
+/-- At the element of D with minimal g-value, leg length = 0. -/
+private lemma legLength_eq_zero_of_minimal_gVal (a b : ℕ) (hb : 0 < b)
+    (D : Finset (ℤ × ℤ)) (d : ℤ × ℤ) (hd : d ∈ D)
+    (hmin : ∀ p ∈ D, gVal a b d ≤ gVal a b p) :
+    legLength D d = 0 := by
+  apply le_antisymm _ (Nat.zero_le _)
+  unfold legLength
+  apply Finset.sup_le
+  intro k hk
+  simp only [Finset.mem_image, Finset.mem_filter, id] at hk
+  obtain ⟨p, ⟨hp_mem, hp_col, hp_le⟩, rfl⟩ := hk
+  have hb_pos : (0 : ℤ) < (b : ℤ) := by exact_mod_cast hb
+  have hg_eq : gVal a b p = gVal a b d - (b : ℤ) * (p.2 - d.2) := by
+    simp only [gVal, hp_col]; ring
+  have hmin_p := hmin p hp_mem
+  have hdiff_le : p.2 - d.2 ≤ 0 := by rw [hg_eq] at hmin_p; nlinarith
+  have hdiff_ge : 0 ≤ p.2 - d.2 := by linarith
+  have hdiff_zero : p.2 - d.2 = 0 := le_antisymm hdiff_le hdiff_ge
+  simp [hdiff_zero]
+
+/-- Theorem 1.1 (positivity): Q(𝟙_D) > 0 when D ≠ ∅.
+    The minimal element d satisfies arm_D(d) = leg_D(d) = 0, so dinvCond holds for d. -/
+theorem dinvAsym_pos_of_nonempty (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
+    (hcop : Nat.Coprime a b) (D : Finset (ℤ × ℤ))
+    (hD : IsSubdiagram a b D) (hne : D.Nonempty) :
+    0 < dinvAsym a b D D := by
+  -- Find d = element of D with minimal g-value
+  obtain ⟨d, hd_mem, hd_min⟩ := D.exists_min_image (fun p => gVal a b p) hne
+  -- arm and leg lengths at d are both 0
+  have harm : armLength D d = 0 :=
+    armLength_eq_zero_of_minimal_gVal a b ha D d hd_mem hd_min
+  have hleg : legLength D d = 0 :=
+    legLength_eq_zero_of_minimal_gVal a b hb D d hd_mem hd_min
+  -- dinvCond holds for d: reduces to 0 < a which is ha
+  have hcond : dinvCond a b D D d = true := by
+    rw [dinvCond_iff_slopes a b hb D D d]
+    refine ⟨?_, ?_⟩
+    · -- smallSlope D D d = 0 < a/b
+      have : smallSlope D D d = 0 := by
+        simp [smallSlope, hleg, harm]
+      rw [this]
+      apply div_pos (by exact_mod_cast ha) (by exact_mod_cast hb)
+    · -- a/b < largeSlope D D d = ⊤
+      have : largeSlope D D d = ⊤ := by
+        simp [largeSlope, harm]
+      rw [this]
+      exact WithTop.coe_lt_top _
+  -- d is in the filter, so card ≥ 1
+  apply Finset.card_pos.mpr
+  exact ⟨d, Finset.mem_filter.mpr ⟨Finset.mem_inter.mpr ⟨hd_mem, hd_mem⟩, hcond⟩⟩
+
+theorem quadForm_pos_of_nonempty (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
+    (hcop : Nat.Coprime a b) (D : Finset (ℤ × ℤ))
+    (hD : IsSubdiagram a b D) (hne : D.Nonempty) :
+    (0 : ℝ) < quadForm a b (indicatorVec D) := by
+  rw [quadForm_eq_dinvAsym a b ha hb hab hcop D hD]
+  exact_mod_cast dinvAsym_pos_of_nonempty a b ha hb hab hcop D hD hne
+
+-- ============================================================
+-- Theorem 1.3: B(n,n') ≥ 0 on C_R and Q(n) ≥ (1/|G|)‖n‖²_∞
+-- ============================================================
+
+/-- The cone C_R: non-negative functions on G weakly decreasing northeast. -/
+def IsCone (a b : ℕ) (n : ℤ × ℤ → ℝ) : Prop :=
+  (∀ p ∈ gapFinset a b, (0 : ℝ) ≤ n p) ∧
+  (∀ i j, i ∈ gapFinset a b → j ∈ gapFinset a b →
+    gapLE a b i j → n j ≥ n i)
+
+/-- ℓ∞ norm of n on G (supremum of values, which equals n at the SW corner for n ∈ C_R). -/
+noncomputable def linfNorm (a b : ℕ) (n : ℤ × ℤ → ℝ) : ℝ :=
+  if h : (gapFinset a b).Nonempty then (gapFinset a b).sup' h n else 0
+
+/-- Symmetric bilinear form formula: B(n,n') = (1/2) ∑∑ K * (n(i)n'(j) + n'(i)n(j)). -/
+private lemma bilinForm_formula (a b : ℕ) (n n' : ℤ × ℤ → ℝ) :
+    bilinForm a b n n' = (1 / 2 : ℝ) * ∑ i ∈ gapFinset a b, ∑ j ∈ gapFinset a b,
+      (kernelK a b (gVal a b j - gVal a b i) : ℝ) * (n i * n' j + n' i * n j) := by
+  unfold bilinForm
+  congr 1
+  exact quadForm_cross_terms a b n n'
+
+/-- B is linear in first argument (scalar multiplication). -/
+private lemma bilinForm_smul_left (a b : ℕ) (c : ℝ) (n n' : ℤ × ℤ → ℝ) :
+    bilinForm a b (c • n) n' = c * bilinForm a b n n' := by
+  rw [bilinForm_formula a b (c • n) n', bilinForm_formula a b n n']
+  simp only [Pi.smul_apply, smul_eq_mul]
+  have heq : ∀ i j : ℤ × ℤ,
+      (kernelK a b (gVal a b j - gVal a b i) : ℝ) * (c * n i * n' j + n' i * (c * n j)) =
+      c * ((kernelK a b (gVal a b j - gVal a b i) : ℝ) * (n i * n' j + n' i * n j)) := by
+    intros; ring
+  simp_rw [heq, ← Finset.mul_sum, ← Finset.mul_sum]
+  ring
+
+/-- B is linear in first argument (addition). -/
+private lemma bilinForm_add_left (a b : ℕ) (n₁ n₂ n' : ℤ × ℤ → ℝ) :
+    bilinForm a b (n₁ + n₂) n' = bilinForm a b n₁ n' + bilinForm a b n₂ n' := by
+  rw [bilinForm_formula a b (n₁ + n₂) n', bilinForm_formula a b n₁ n',
+      bilinForm_formula a b n₂ n']
+  simp only [Pi.add_apply]
+  have heq : ∀ i j : ℤ × ℤ,
+      (kernelK a b (gVal a b j - gVal a b i) : ℝ) *
+        ((n₁ i + n₂ i) * n' j + n' i * (n₁ j + n₂ j)) =
+      (kernelK a b (gVal a b j - gVal a b i) : ℝ) * (n₁ i * n' j + n' i * n₁ j) +
+      (kernelK a b (gVal a b j - gVal a b i) : ℝ) * (n₂ i * n' j + n' i * n₂ j) := by
+    intros; ring
+  simp_rw [heq, Finset.sum_add_distrib]
+  ring
+
+/-- B(∑ λ_i n_i, n') = ∑ λ_i B(n_i, n'). -/
+private lemma bilinForm_sum_left (a b : ℕ) {ι : Type*} (s : Finset ι)
+    (λv : ι → ℝ) (n : ι → ℤ × ℤ → ℝ) (n' : ℤ × ℤ → ℝ) :
+    bilinForm a b (∑ i ∈ s, λv i • n i) n' = ∑ i ∈ s, λv i * bilinForm a b (n i) n' := by
+  induction s using Finset.induction with
+  | empty =>
+    simp only [Finset.sum_empty]
+    rw [bilinForm_formula]
+    simp [show (0 : ℤ × ℤ → ℝ) = fun _ => 0 from rfl]
+  | insert ha ih =>
+    rw [Finset.sum_insert ha, Finset.sum_insert ha]
+    rw [bilinForm_add_left, bilinForm_smul_left, ih]
+
+/-- Level set D_c = {g ∈ G : n(g) ≥ c} is a subdiagram when n ∈ C_R. -/
+private lemma levelSet_isSubdiagram (a b : ℕ) (n : ℤ × ℤ → ℝ)
+    (hn : IsCone a b n) (c : ℝ) :
+    IsSubdiagram a b ((gapFinset a b).filter (fun g => c ≤ n g)) := by
+  constructor
+  · exact Finset.filter_subset _ _
+  · intro i hi j hj hij
+    simp only [Finset.mem_filter] at hi ⊢
+    exact ⟨hj, le_trans hi.2 (hn.2 i j hi.1 hj hij)⟩
+
+/-- Lemma 5.1: Every n ∈ C_R is a positive linear combination of indicator vectors of
+    subdiagrams. Canonical construction via sorted level sets. -/
+lemma cone_generated_by_subdiagrams (a b : ℕ) (ha : 0 < a) (hb : 0 < b)
+    (n : ℤ × ℤ → ℝ) (hn : IsCone a b n)
+    (hn_supp : ∀ p, p ∉ gapFinset a b → n p = 0) :
+    ∃ (k : ℕ) (D : Fin k → Finset (ℤ × ℤ)) (λv : Fin k → ℝ),
+      (∀ i, (0 : ℝ) < λv i) ∧
+      (∀ i, IsSubdiagram a b (D i)) ∧
+      (∀ p, n p = ∑ i : Fin k, λv i * indicatorVec (D i) p) ∧
+      (∀ i, (D i).Nonempty) ∧
+      k ≤ (gapFinset a b).card := by
+  -- Use the sorted distinct positive values of n on G as level set thresholds
+  classical
+  -- Values of n on G, as a sorted list with duplicates removed
+  let vals_set := ((gapFinset a b).image n).filter (fun c => 0 < c)
+  let vals := vals_set.sort (· ≤ ·)
+  let k := vals.length
+  -- Level sets: D_i = {g ∈ G : n(g) ≥ vals[i]}
+  let D : Fin k → Finset (ℤ × ℤ) := fun i =>
+    (gapFinset a b).filter (fun g => vals.get i ≤ n g)
+  -- λ_i = vals[i] - vals[i-1] (with vals[-1] = 0)
+  let prev : Fin k → ℝ := fun i =>
+    if h : i.val = 0 then 0 else vals.get ⟨i.val - 1, by omega⟩
+  let λv : Fin k → ℝ := fun i => vals.get i - prev i
+  refine ⟨k, D, λv, ?_, ?_, ?_, ?_, ?_⟩
+  · -- λ_i > 0 (consecutive distinct values)
+    intro i
+    simp only [λv, prev]
+    split_ifs with h
+    · simp [h]
+      have : vals.get i ∈ vals_set := by
+        have := Finset.sort_mem vals_set (· ≤ ·) |>.mp (List.get_mem vals i.isLt)
+        exact this
+      simp [vals_set] at this
+      exact this.2
+    · have hlt : vals.get ⟨i.val - 1, by omega⟩ < vals.get i := by
+        apply List.Sorted.get_strictMono (Finset.sort_sorted_lt vals_set)
+        omega
+      linarith
+  · -- D_i are subdiagrams
+    intro i
+    exact levelSet_isSubdiagram a b n hn (vals.get i)
+  · -- n = ∑ λ_i 𝟙_{D_i} pointwise
+    intro p
+    by_cases hp : p ∈ gapFinset a b
+    · -- Telescoping sum: indicator (D i) p = if vals[i] ≤ n p then 1 else 0
+      -- vals is sorted, n p appears at position j, sum telescopes to vals[j] = n p
+      have hnp_nn : 0 ≤ n p := hn.1 p hp
+      have hind : ∀ i : Fin k, indicatorVec (D i) p = if vals.get i ≤ n p then 1 else 0 := by
+        intro i; simp only [indicatorVec, D, Finset.mem_filter, hp, true_and]
+      simp_rw [hind, mul_ite, mul_one, mul_zero, ← Finset.sum_filter]
+      by_cases hnp0 : n p = 0
+      · -- All vals > 0, no indicator fires, sum = 0 = n p
+        rw [hnp0]
+        simp only [le_refl, ite_true]
+        apply (Finset.sum_empty.symm.trans _).symm
+        congr 1; ext ⟨i, hi⟩
+        simp only [Finset.mem_filter, Finset.mem_univ, Finset.not_mem_empty, iff_false,
+                   not_and, true_and]
+        intro h
+        have hvi : 0 < vals.get ⟨i, hi⟩ := by
+          have hmem := Finset.sort_mem vals_set (· ≤ ·) |>.mp (List.get_mem vals i hi)
+          simp only [vals_set, Finset.mem_filter, Finset.mem_image] at hmem
+          exact hmem.2
+        linarith [hnp0 ▸ h]
+      · -- n p > 0, appears in vals at some position j
+        have hnp_pos : 0 < n p := lt_of_le_of_ne hnp_nn (Ne.symm hnp0)
+        have hnp_in_vset : n p ∈ vals_set := by
+          simp only [vals_set, Finset.mem_filter, Finset.mem_image]
+          exact ⟨⟨p, hp, rfl⟩, hnp_pos⟩
+        have hnp_in : n p ∈ vals :=
+          (Finset.sort_mem vals_set (· ≤ ·)).mpr hnp_in_vset
+        obtain ⟨⟨j, hj_lt⟩, hj_val⟩ := List.mem_iff_get.mp hnp_in
+        -- strict monotonicity of vals
+        have hmono : ∀ (a b : Fin k), a < b → vals.get a < vals.get b :=
+          List.Sorted.get_strictMono (Finset.sort_sorted_lt vals_set)
+        -- The filter {i | vals[i] ≤ n p} equals {i | i.val ≤ j}
+        have hfilt : Finset.univ.filter (fun i : Fin k => vals.get i ≤ n p) =
+            Finset.univ.filter (fun i : Fin k => i.val ≤ j) := by
+          ext ⟨i, hi⟩
+          simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+          constructor
+          · intro hle
+            by_contra h_gt; push_neg at h_gt
+            have := hmono ⟨j, hj_lt⟩ ⟨i, hi⟩ (by simpa [Fin.lt_iff_val_lt_val])
+            linarith [hj_val]
+          · intro hle
+            rcases Nat.eq_or_lt_of_le hle with rfl | hlt
+            · linarith [hj_val.symm.le]
+            · have := hmono ⟨i, hi⟩ ⟨j, hj_lt⟩ (by simpa [Fin.lt_iff_val_lt_val])
+              linarith [hj_val]
+        rw [hfilt]
+        -- Telescope: ∑_{i ≤ j} λv i = vals[j] = n p
+        suffices htel : ∀ (m : ℕ) (hm : m < k),
+            ∑ i ∈ Finset.univ.filter (fun i : Fin k => i.val ≤ m), λv i =
+            vals.get ⟨m, hm⟩ by
+          rw [htel j hj_lt, hj_val]
+        intro m
+        induction m with
+        | zero =>
+          intro hm
+          have hfilt0 : Finset.univ.filter (fun i : Fin k => i.val ≤ 0) = {⟨0, hm⟩} := by
+            ext ⟨i, hi⟩; simp [Fin.ext_iff]; omega
+          rw [hfilt0, Finset.sum_singleton]
+          simp only [λv, prev, Fin.val_zero, ite_true, sub_zero]
+        | succ m ih =>
+          intro hm
+          have hmk : m < k := Nat.lt_of_succ_lt hm
+          have hsplit : Finset.univ.filter (fun i : Fin k => i.val ≤ m + 1) =
+              Finset.univ.filter (fun i : Fin k => i.val ≤ m) ∪ {⟨m + 1, hm⟩} := by
+            ext ⟨i, hi⟩; simp [Fin.ext_iff]; omega
+          rw [hsplit, Finset.sum_union]
+          · rw [ih hmk, Finset.sum_singleton]
+            suffices h : λv ⟨m + 1, hm⟩ = vals.get ⟨m + 1, hm⟩ - vals.get ⟨m, hmk⟩ by
+              linarith
+            show vals.get ⟨m + 1, hm⟩ -
+                (if (m + 1) = 0 then 0 else vals.get ⟨m + 1 - 1, by omega⟩) =
+                vals.get ⟨m + 1, hm⟩ - vals.get ⟨m, hmk⟩
+            simp only [show ¬(m + 1 = 0) from Nat.succ_ne_zero m, ite_false,
+                       show m + 1 - 1 = m from Nat.add_sub_cancel]
+          · simp only [Finset.disjoint_left, Finset.mem_filter, Finset.mem_univ,
+                       Finset.mem_singleton, Fin.mk.injEq, true_and]
+            intro ⟨i, _⟩ hle heq; omega
+    · -- p ∉ gapFinset: n p = 0 and all D i ⊆ gapFinset so indicators are 0
+      rw [hn_supp p hp]
+      apply Finset.sum_eq_zero
+      intro ⟨i, hi⟩ _
+      have hpi : p ∉ D ⟨i, hi⟩ := fun h => hp (Finset.filter_subset _ _ h)
+      simp only [indicatorVec, if_neg hpi, mul_zero]
+  · -- D_i are nonempty: vals[i] is achieved at some p ∈ G
+    intro ⟨i, hi⟩
+    have hvi_in : vals.get ⟨i, hi⟩ ∈ vals_set :=
+      Finset.sort_mem vals_set (· ≤ ·) |>.mp (List.get_mem vals i hi)
+    simp only [vals_set, Finset.mem_filter, Finset.mem_image] at hvi_in
+    obtain ⟨⟨p, hp, hpval⟩, _⟩ := hvi_in
+    exact ⟨p, Finset.mem_filter.mpr ⟨hp, hpval ▸ le_refl _⟩⟩
+  · -- k ≤ |G|: k = #vals_set ≤ #(image n on G) ≤ |G|
+    have hkvals : k = vals_set.card := by simp [k, vals, Finset.length_sort]
+    have hvsub : vals_set ⊆ (gapFinset a b).image n := Finset.filter_subset _ _
+    calc k = vals_set.card := hkvals
+      _ ≤ ((gapFinset a b).image n).card := Finset.card_le_card hvsub
+      _ ≤ (gapFinset a b).card := Finset.card_image_le
+
+/-- crossDinv is always non-negative (it equals (ℕ : ℝ) / 2). -/
+private lemma crossDinv_nonneg (a b : ℕ) (D E : Finset (ℤ × ℤ)) :
+    (0 : ℝ) ≤ crossDinv a b D E := by
+  simp only [crossDinv]
+  positivity
+
+/-- Theorem 1.3 (semi-definiteness): B(n,n') ≥ 0 for n,n' ∈ C_R.
+    Proof: decompose via Lemma 5.1, then use bilinearity and B(𝟙_D,𝟙_E) = crossDinv ≥ 0. -/
+theorem bilinForm_nonneg (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
+    (hcop : Nat.Coprime a b) (n n' : ℤ × ℤ → ℝ)
+    (hn : IsCone a b n) (hn' : IsCone a b n')
+    (hn_supp : ∀ p, p ∉ gapFinset a b → n p = 0)
+    (hn'_supp : ∀ p, p ∉ gapFinset a b → n' p = 0) :
+    (0 : ℝ) ≤ bilinForm a b n n' := by
+  obtain ⟨k, D, λv, hλ_pos, hD_sub, hn_eq, _, _⟩ :=
+    cone_generated_by_subdiagrams a b ha hb n hn hn_supp
+  obtain ⟨l, E, μv, hμ_pos, hE_sub, hn'_eq, _, _⟩ :=
+    cone_generated_by_subdiagrams a b ha hb n' hn' hn'_supp
+  -- Rewrite n and n' as sums of smul'd indicator functions
+  have hn_fun : n = ∑ i : Fin k, λv i • indicatorVec (D i) := by
+    ext p; simp [hn_eq p, indicatorVec]
+  have hn'_fun : n' = ∑ j : Fin l, μv j • indicatorVec (E j) := by
+    ext p; simp [hn'_eq p, indicatorVec]
+  -- B is symmetric: B(n,n') = B(n',n)
+  have bsym : ∀ (f g : ℤ × ℤ → ℝ), bilinForm a b f g = bilinForm a b g f := by
+    intros f g; rw [bilinForm_formula a b f g, bilinForm_formula a b g f]
+    congr 1; apply Finset.sum_congr rfl; intro i _
+    apply Finset.sum_congr rfl; intro j _; ring
+  rw [hn_fun, hn'_fun]
+  rw [bilinForm_sum_left]
+  apply Finset.sum_nonneg; intro i _
+  -- Use symmetry to apply sum_left on second argument
+  rw [bsym, bilinForm_sum_left, Finset.mul_sum]
+  apply Finset.sum_nonneg; intro j _
+  rw [bsym (indicatorVec (D i))]
+  apply mul_nonneg
+  · apply mul_nonneg (le_of_lt (hλ_pos i)) (le_of_lt (hμ_pos j))
+  · rw [bilinForm_eq_crossDinv a b ha hb hab hcop (D i) (E j) (hD_sub i) (hE_sub j)]
+    exact crossDinv_nonneg a b (D i) (E j)
+
+/-- Q(n) ≥ 0 on C_R. -/
+theorem quadForm_nonneg (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
+    (hcop : Nat.Coprime a b) (n : ℤ × ℤ → ℝ)
+    (hn : IsCone a b n)
+    (hn_supp : ∀ p, p ∉ gapFinset a b → n p = 0) :
+    (0 : ℝ) ≤ quadForm a b n := by
+  rw [← bilinForm_eq_quadForm]
+  exact bilinForm_nonneg a b ha hb hab hcop n n hn hn hn_supp hn_supp
+
+
+
+/-- Theorem 1.3 (effective bound): Q(n) ≥ (1/|G|) ‖n‖²_∞ for n ∈ C_R.
+    Proof: use Lemma 5.1 to write n = ∑ λ_i 𝟙_{D_i}, then
+    Q(n) ≥ ∑ λ_i² * dinv(D_i) ≥ ∑ λ_i² ≥ (∑ λ_i)²/|G| by Cauchy-Schwarz. -/
+theorem quadForm_bound (a b : ℕ) (ha : 0 < a) (hb : 0 < b) (hab : a < b)
+    (hcop : Nat.Coprime a b) (n : ℤ × ℤ → ℝ)
+    (hn : IsCone a b n)
+    (hn_supp : ∀ p, p ∉ gapFinset a b → n p = 0)
+    (hG : (gapFinset a b).Nonempty) :
+    ((gapFinset a b).card : ℝ)⁻¹ * (linfNorm a b n) ^ 2 ≤ quadForm a b n := by
+  obtain ⟨k, D, λv, hλ_pos, hD_sub, hn_eq, hD_ne, hkG_raw⟩ :=
+    cone_generated_by_subdiagrams a b ha hb n hn hn_supp
+  -- Step 1: Q(n) ≥ ∑ λ_i² (diagonal bound using dinv(D_i) ≥ 1)
+  have hQ_lb : ∑ i : Fin k, (λv i) ^ 2 ≤ quadForm a b n := by
+    rw [← bilinForm_eq_quadForm]
+    have hn_fun : n = ∑ i : Fin k, λv i • indicatorVec (D i) := by
+      ext p; simp [hn_eq p, indicatorVec]
+    rw [hn_fun, bilinForm_sum_left]
+    have hbsym : ∀ f g : ℤ × ℤ → ℝ, bilinForm a b f g = bilinForm a b g f := by
+      intros f g; rw [bilinForm_formula, bilinForm_formula]
+      congr 1; apply Finset.sum_congr rfl; intro i _
+      apply Finset.sum_congr rfl; intro j _; ring
+    calc ∑ i : Fin k, (λv i) ^ 2
+        = ∑ i : Fin k, (λv i) ^ 2 * 1 := by simp
+      _ ≤ ∑ i : Fin k, (λv i) ^ 2 * (dinvAsym a b (D i) (D i) : ℝ) := by
+          apply Finset.sum_le_sum; intro i _
+          apply mul_le_mul_of_nonneg_left _ (sq_nonneg _)
+          exact_mod_cast dinvAsym_pos_of_nonempty a b ha hb hab hcop (D i) (hD_sub i) (hD_ne i)
+      _ = ∑ i : Fin k, (λv i) ^ 2 * bilinForm a b (indicatorVec (D i)) (indicatorVec (D i)) := by
+          apply Finset.sum_congr rfl; intro i _
+          congr 1
+          rw [bilinForm_eq_crossDinv a b ha hb hab hcop (D i) (D i) (hD_sub i) (hD_sub i)]
+          simp [crossDinv]; push_cast; ring
+      _ ≤ ∑ i : Fin k, λv i * bilinForm a b (indicatorVec (D i)) (∑ j : Fin k, λv j • indicatorVec (D j)) := by
+          apply Finset.sum_le_sum; intro i _
+          rw [bilinForm_sum_left]
+          calc (λv i) ^ 2 * bilinForm a b (indicatorVec (D i)) (indicatorVec (D i))
+              = λv i * (λv i * bilinForm a b (indicatorVec (D i)) (indicatorVec (D i))) := by ring
+            _ ≤ λv i * ∑ j : Fin k, λv j * bilinForm a b (indicatorVec (D i)) (indicatorVec (D j)) := by
+                apply mul_le_mul_of_nonneg_left _ (le_of_lt (hλ_pos i))
+                apply Finset.single_le_sum (fun j _ => ?_) _ ⟨i, Finset.mem_univ i⟩
+                · apply mul_nonneg (le_of_lt (hλ_pos j))
+                  rw [bilinForm_eq_crossDinv a b ha hb hab hcop (D i) (D j) (hD_sub i) (hD_sub j)]
+                  exact crossDinv_nonneg a b (D i) (D j)
+      _ = ∑ i : Fin k, λv i * bilinForm a b (indicatorVec (D i)) n := by
+          congr 1; ext i; congr 1; rw [← hn_fun]
+  -- Step 2: ‖n‖_∞ ≤ ∑ λ_i (pointwise: n p = ∑ λ_i * indicator ≤ ∑ λ_i since indicator ≤ 1)
+  have hlinf_le : linfNorm a b n ≤ ∑ i : Fin k, λv i := by
+    simp only [linfNorm, dif_pos hG]
+    apply Finset.sup'_le
+    intro p hp
+    rw [hn_eq p]
+    calc ∑ i : Fin k, λv i * indicatorVec (D i) p
+        ≤ ∑ i : Fin k, λv i * 1 :=
+          Finset.sum_le_sum fun i _ => by
+            apply mul_le_mul_of_nonneg_left _ (le_of_lt (hλ_pos i))
+            simp only [indicatorVec]; split_ifs <;> norm_num
+      _ = ∑ i : Fin k, λv i := by simp
+  have hlinf_nn : 0 ≤ linfNorm a b n := by
+    simp only [linfNorm, dif_pos hG]
+    obtain ⟨p, hp⟩ := hG
+    exact le_trans (hn.1 p hp) (Finset.le_sup' n ⟨p, hp⟩)
+  -- Step 3: Cauchy-Schwarz (∑ λ_i)² ≤ k * ∑ λ_i²
+  have hcs : (∑ i : Fin k, λv i) ^ 2 ≤ (k : ℝ) * ∑ i : Fin k, (λv i) ^ 2 := by
+    have h := Finset.sum_mul_sq_le_sq_mul_sq Finset.univ (fun _ : Fin k => (1 : ℝ)) λv
+    simp only [one_mul, one_pow, Finset.sum_const, Finset.card_univ, Finset.card_fin,
+               nsmul_eq_mul, mul_one] at h
+    exact h
+  -- Step 4: k ≤ |G|
+  have hkG : (k : ℝ) ≤ (gapFinset a b).card := by exact_mod_cast hkG_raw
+  have hGpos : (0 : ℝ) < (gapFinset a b).card := by
+    exact_mod_cast Finset.card_pos.mpr hG
+  calc ((gapFinset a b).card : ℝ)⁻¹ * (linfNorm a b n) ^ 2
+      ≤ ((gapFinset a b).card : ℝ)⁻¹ * (∑ i : Fin k, λv i) ^ 2 := by
+        apply mul_le_mul_of_nonneg_left _ (by positivity)
+        exact pow_le_pow_left hlinf_nn hlinf_le 2
+    _ ≤ ((gapFinset a b).card : ℝ)⁻¹ * ((k : ℝ) * ∑ i : Fin k, (λv i) ^ 2) := by
+        apply mul_le_mul_of_nonneg_left hcs (by positivity)
+    _ ≤ ((gapFinset a b).card : ℝ)⁻¹ * ((gapFinset a b).card * ∑ i : Fin k, (λv i) ^ 2) := by
+        apply mul_le_mul_of_nonneg_left _ (by positivity)
+        apply mul_le_mul_of_nonneg_right hkG
+        apply Finset.sum_nonneg; intro i _; positivity
+    _ = ∑ i : Fin k, (λv i) ^ 2 := by field_simp; ring
+    _ ≤ quadForm a b n := hQ_lb
+
 end RationalDinv
