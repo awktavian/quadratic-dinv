@@ -1,13 +1,76 @@
-name: Lean
+name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+
+# Cancel in-progress runs on the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
+    name: Build & verify
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: leanprover/lean-action@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install elan
+        run: |
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- --default-toolchain none -y
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Read toolchain
+        id: toolchain
+        run: echo "version=$(cat lean-toolchain)" >> "$GITHUB_OUTPUT"
+
+      - name: Install Lean toolchain
+        run: elan toolchain install ${{ steps.toolchain.outputs.version }}
+
+      - name: Cache elan toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.elan
+          key: elan-${{ steps.toolchain.outputs.version }}
+
+      - name: Cache Lake build artifacts
+        uses: actions/cache@v4
+        with:
+          path: .lake/build
+          key: lake-${{ runner.os }}-${{ steps.toolchain.outputs.version }}-${{ hashFiles('lake-manifest.json') }}-${{ hashFiles('QuadraticDinv/**/*.lean') }}
+          restore-keys: |
+            lake-${{ runner.os }}-${{ steps.toolchain.outputs.version }}-${{ hashFiles('lake-manifest.json') }}-
+            lake-${{ runner.os }}-${{ steps.toolchain.outputs.version }}-
+
+      - name: Get Mathlib cache
+        # Pulls precompiled .olean files from the Mathlib cache server (~30 min saved)
+        run: lake exe cache get
+        continue-on-error: true
+
+      - name: Build
+        run: lake build QuadraticDinv
+
+      - name: Verify zero sorry
+        run: |
+          SORRY=$(lake build 2>&1 | grep "declaration uses 'sorry'" | wc -l | tr -d ' ')
+          echo "sorry count: $SORRY"
+          if [ "$SORRY" -gt 0 ]; then
+            lake build 2>&1 | grep "declaration uses 'sorry'"
+            exit 1
+          fi
+          echo "PASS: 0 sorry"
+
+      - name: Verify solution imports problem
+        run: |
+          if ! grep -q "^import QuadraticDinv.problem" QuadraticDinv/solution.lean; then
+            echo "FAIL: solution.lean does not import problem.lean — definitions are not Lean-enforced"
+            exit 1
+          fi
+          echo "PASS: solution.lean imports problem.lean"

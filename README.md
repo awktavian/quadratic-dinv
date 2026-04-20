@@ -1,5 +1,10 @@
 # A Quadratic Form Generalization of Rational Dinv
 
+[![CI](https://github.com/awktavian/quadratic-dinv/actions/workflows/lean.yml/badge.svg)](https://github.com/awktavian/quadratic-dinv/actions/workflows/lean.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Lean](https://img.shields.io/badge/Lean-4.28.0-blue.svg)](lean-toolchain)
+[![sorry: 0](https://img.shields.io/badge/sorry-0-brightgreen.svg)](QuadraticDinv/solution.lean)
+
 **Paper**: [arXiv:2604.13238](https://arxiv.org/abs/2604.13238) — Yifeng Huang (2026)
 **Fork**: [github.com/awktavian/quadratic-dinv](https://github.com/awktavian/quadratic-dinv)
 (forked from [AxiomMath/quadratic-dinv](https://github.com/AxiomMath/quadratic-dinv))
